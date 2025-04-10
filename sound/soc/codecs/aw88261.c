@@ -116,9 +116,6 @@ static void aw88261_dev_pwd(struct aw_device *aw_dev, bool pwd)
 		regmap_update_bits(aw_dev->regmap, AW88261_SYSCTRL_REG,
 				   ~AW88261_PWDN_MASK,
 				   AW88261_PWDN_WORKING_VALUE);
-	// printk("aw88261.c: "
-	//        "aw88261_dev_pwd: pwd = %d\n",
-	//        pwd);
 }
 
 static void aw88261_dev_amppd(struct aw_device *aw_dev, bool amppd)
@@ -132,10 +129,6 @@ static void aw88261_dev_amppd(struct aw_device *aw_dev, bool amppd)
 		ret = regmap_update_bits(aw_dev->regmap, AW88261_SYSCTRL_REG,
 					 ~AW88261_AMPPD_MASK,
 					 AW88261_AMPPD_WORKING_VALUE);
-
-	// printk("aw88261.c: "
-	//        "aw88261_dev_amppd: amppd = %d, ret = %d\n",
-	//        amppd, ret);
 }
 
 static void aw88261_dev_mute(struct aw_device *aw_dev, bool is_mute)
@@ -173,22 +166,17 @@ static int aw88261_dev_get_iis_status(struct aw_device *aw_dev)
 	ret = regmap_read(aw_dev->regmap, AW88261_SYSST_REG, &reg_val);
 	if (ret)
 		return ret;
-	// if ((reg_val & AW88261_BIT_PLL_CHECK) != AW88261_BIT_PLL_CHECK) {
-	// 	dev_err(aw_dev->dev, "check pll lock fail,reg_val:0x%04x",
-	// 		reg_val);
-	// 	return -EINVAL;
-	// }
+
 	bool pll_lock = (reg_val & (1 << 0)) == 0x0001;
 	bool clks_available = (reg_val & (1 << 5)) == 0x0000;
 
 	if (pll_lock && clks_available) {
-		printk("aw88261.c: "
-		       "aw88261_dev_get_iis_status: IIS signal is OK");
+		dev_dbg(aw_dev->dev, "IIS signal is OK aaa");
 		ret = 0;
 	} else {
-		printk("aw88261.c: "
-		       "aw88261_dev_get_iis_status: IIS signal is not OK, pll_lock:%d, clks_available:%d",
-		       pll_lock, clks_available);
+		dev_err(aw_dev->dev,
+			"IIS signal is not OK, pll_lock:%d, clks_available:%d",
+			pll_lock, clks_available);
 		ret = -EINVAL;
 	}
 	return ret;
@@ -292,10 +280,6 @@ static int aw88261_dev_reg_update(struct aw88261 *aw88261, unsigned char *data,
 	u16 reg_val;
 	u8 reg_addr;
 
-	printk("aw88261.c: "
-	       "aw88261_dev_reg_update: len = %d, data = 0x%02x\n",
-	       len, *data);
-
 	if (!len || !data) {
 		dev_err(aw_dev->dev, "reg data is null or len is 0");
 		return -EINVAL;
@@ -337,10 +321,6 @@ static int aw88261_dev_reg_update(struct aw88261 *aw88261, unsigned char *data,
 		default:
 			continue;
 		}
-
-		// printk("aw88261.c: "
-		//        "aw88261_dev_reg_update: reg_addr=0x%02x, reg_val=0x%04x, data_len: %d\n",
-		//        reg_addr, reg_val, data_len);
 
 		if (reg_addr == AW88261_SYSCTRL_REG) {
 			aw88261->amppd_st = reg_val & (~AW88261_AMPPD_MASK);
@@ -386,9 +366,10 @@ static int aw88261_dev_reg_update(struct aw88261 *aw88261, unsigned char *data,
 			// slot_num = 0;
 			reg_val = 0b0101000000000000 | (slot_num << 4) |
 				  (slot_num); // 0b0101_0000_0000_0000;
-			printk("aw88261.c: "
-			       "Setting TDM mode for Xiaomi Pad 6, channel: %d",
-			       slot_num);
+			dev_info(
+				aw_dev->dev,
+				"Setting TDM mode for Xiaomi Pad 6, channel: %d",
+				slot_num);
 		}
 
 		/* i2stxen */
@@ -407,17 +388,10 @@ static int aw88261_dev_reg_update(struct aw88261 *aw88261, unsigned char *data,
 				REG_VAL_TO_DB(read_vol);
 		}
 
-		// if (reg_addr == AW88261_VSNTM1_REG)
-		// 	continue;
-
 		ret = regmap_write(aw_dev->regmap, reg_addr, reg_val);
 		if (ret)
 			break;
 	}
-
-	// ret = aw88261_dev_set_vcalb(aw_dev);
-	// if (ret)
-	// 	return ret;
 
 	if (aw_dev->prof_cur != aw_dev->prof_index)
 		vol_desc->ctl_volume = 0;
@@ -533,8 +507,6 @@ static int aw88261_dev_start(struct aw88261 *aw88261)
 
 	if (aw88261->amppd_st)
 		aw88261_dev_amppd(aw_dev, true);
-
-	//aw88261_reg_force_set(aw88261);
 
 	/* close uls mute */
 	aw88261_dev_uls_hmute(aw_dev, false);
@@ -669,11 +641,8 @@ static void aw88261_start(struct aw88261 *aw88261, bool sync_start)
 static int aw88261_dai_set_stream(struct snd_soc_dai *dai, void *sdw_stream,
 				  int direction)
 {
-	printk("aw88261_soc: "
-	       "aw88261_dai_set_stream invoked");
 	snd_soc_dai_dma_data_set(dai, direction, sdw_stream);
-	printk("aw88261_soc: "
-	       "aw88261_dai_set_stream\n");
+
 	return 0;
 }
 
@@ -719,19 +688,14 @@ static int aw88261_hw_params(struct snd_pcm_substream *substream,
 	 * If specific configurations are needed, they should be implemented here,
 	 * setting up the DAI based on the parameters.
 	 */
-	printk("aw88261_soc: "
-	       "aw88261_hw_params invoked");
 
-	// aw_snd_soc_codec_t *codec = dai->component;
+	dev_info(aw88261->aw_pa->dev, "Stream direction: %s",
+		 (substream->stream == SNDRV_PCM_STREAM_CAPTURE) ? "Capture" :
+								   "Playback");
 
-	printk("aw88261_soc: "
-	       "Stream direction: %s",
-	       (substream->stream == SNDRV_PCM_STREAM_CAPTURE) ? "Capture" :
-								 "Playback");
-
-	printk("aw88261_soc: "
-	       "Requested rate: %d Hz, sample size: %d bits",
-	       params_rate(params), params_width(params));
+	dev_info(aw88261->aw_pa->dev,
+		 "Requested rate: %d Hz, sample size: %d bits",
+		 params_rate(params), params_width(params));
 
 	return 0;
 }
@@ -744,12 +708,10 @@ static int aw88261_startup(struct snd_pcm_substream *substream,
 	// struct aw88261 *aw88261 = snd_soc_component_get_drvdata(codec);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		printk("aw88261_soc: "
-		       "aw882xx_startup playback");
+		// handle playback
 
 	} else {
-		printk("aw88261_soc: "
-		       "aw882xx_startup capture");
+		// handle capture
 	}
 	return 0;
 }
@@ -1204,10 +1166,6 @@ static int aw88261_codec_probe(struct snd_soc_component *component)
 				     "aw88261_request_firmware_file failed\n");
 
 	/* add widgets with unique names for each channel */
-	// ret = aw88261_create_unique_widgets(aw88261, dapm);
-	printk("aw88261_soc: "
-	       "a88261_dapm_widgets size: %d\n",
-	       ARRAY_SIZE(aw88261_dapm_widgets));
 	ret = snd_soc_dapm_new_controls(dapm, aw88261_dapm_widgets,
 					ARRAY_SIZE(aw88261_dapm_widgets));
 	dev_info(component->dev, "Widget return status: %d\n", ret);
@@ -1215,6 +1173,8 @@ static int aw88261_codec_probe(struct snd_soc_component *component)
 		return ret;
 
 	/* add route with unique widget names */
+
+	// TODO CHECK THAT
 	// ret = aw88261_create_unique_routes(aw88261, dapm);
 	ret = snd_soc_dapm_add_routes(dapm, aw88261_audio_map,
 				      ARRAY_SIZE(aw88261_audio_map));
@@ -1249,18 +1209,6 @@ static int aw88261_codec_probe(struct snd_soc_component *component)
 			component->dev,
 			"Applying Xiaomi Pad 6 specific optimizations for channel %d",
 			aw88261->aw_pa->channel);
-
-		// /* Set higher default volume for Xiaomi Pad 6 */
-		// aw88261->aw_pa->volume_desc.ctl_volume =
-		// 	0; /* Start at 0dB attenuation */
-
-		// /* Configure optimized boost settings for better power delivery */
-		// regmap_update_bits(aw88261->regmap, AW88261_BSTCTRL3_REG,
-		// 		   AW88261_FORCE_PWM_MASK,
-		// 		   AW88261_FORCE_PWM_FORCEMINUS_PWM_VALUE);
-		// regmap_update_bits(aw88261->regmap, AW88261_BSTCTRL5_REG,
-		// 		   AW88261_BST_OS_WIDTH_MASK,
-		// 		   AW88261_BST_OS_WIDTH_50NS_VALUE);
 	}
 
 	return ret;
@@ -1362,8 +1310,6 @@ static int aw88261_i2c_probe(struct i2c_client *i2c)
 {
 	struct aw88261 *aw88261;
 	int ret;
-	printk("aw88261_soc: "
-	       "aw88261_i2c_probe invoked");
 
 	dev_info(&i2c->dev, "Probing AW88261 at address 0x%x, name: %s\n",
 		 i2c->addr, dev_name(&i2c->dev));
@@ -1402,13 +1348,6 @@ static int aw88261_i2c_probe(struct i2c_client *i2c)
 	ret = devm_snd_soc_register_component(&i2c->dev, &soc_codec_dev_aw88261,
 					      aw88261_dai,
 					      ARRAY_SIZE(aw88261_dai));
-	if (ret)
-		printk("aw88261_soc: "
-		       "failed to register aw88261: %d",
-		       ret);
-	printk("aw88261_soc: "
-	       "aw88261_i2c_probe success %d",
-	       ret);
 
 	return ret;
 }
@@ -1419,7 +1358,7 @@ MODULE_DEVICE_TABLE(i2c, aw88261_i2c_id);
 
 static const struct of_device_id aw88261_match_table[] = {
 	{ .compatible = "awinic,aw88261" },
-	{ },
+	{},
 };
 MODULE_DEVICE_TABLE(of, aw88261_match_table);
 
