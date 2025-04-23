@@ -161,10 +161,9 @@ static int aw88261_dev_get_iis_status(struct aw_device *aw_dev)
 	bool clks_available = (reg_val & (1 << 5)) == 0x0000;
 
 	if (pll_lock && clks_available) {
-		dev_dbg(aw_dev->dev, "IIS signal is OK");
 		ret = 0;
 	} else {
-		dev_err(aw_dev->dev,
+		dev_dbg(aw_dev->dev,
 			"IIS signal is not OK, pll_lock:%d, clks_available:%d",
 			pll_lock, clks_available);
 		ret = -EINVAL;
@@ -179,7 +178,6 @@ static int aw88261_dev_check_mode1_pll(struct aw_device *aw_dev)
 	for (i = 0; i < AW88261_DEV_SYSST_CHECK_MAX; i++) {
 		ret = aw88261_dev_get_iis_status(aw_dev);
 		if (ret) {
-			dev_err(aw_dev->dev, "mode1 iis signal check error");
 			usleep_range(AW88261_2000_US, AW88261_2000_US + 10);
 		} else {
 			return ret;
@@ -204,12 +202,9 @@ static int aw88261_dev_check_syspll(struct aw_device *aw_dev)
 	}
 
 	if (retry_count == max_retries) {
-		dev_err(aw_dev->dev,
-			"Failed to stabilize PLL after %d attempts, we're cooked", max_retries);
+		dev_dbg(aw_dev->dev,
+			"Failed to stabilize PLL after %d attempts", max_retries);
 		return -ETIMEDOUT;
-	}
-	if (ret == 0) {
-		dev_info(aw_dev->dev, "PLL stabilized successfully");
 	}
 
 	return ret;
@@ -229,12 +224,8 @@ static int aw88261_dev_check_sysst(struct aw_device *aw_dev)
 		check_val = reg_val & (~AW88261_BIT_SYSST_CHECK_MASK)
 							& AW88261_BIT_SYSST_CHECK;
 		if (check_val != AW88261_BIT_SYSST_CHECK) {
-			dev_err(aw_dev->dev, "check sysst fail, reg_val=0x%04x, check:0x%x",
-				reg_val, AW88261_BIT_SYSST_CHECK);
 			usleep_range(AW88261_2000_US, AW88261_2000_US + 10);
 		} else {
-			dev_err(aw_dev->dev, "check sysst ok, reg_val=0x%04x",
-				reg_val, AW88261_BIT_SYSST_CHECK);
 			return 0;
 		}
 	}
@@ -258,7 +249,7 @@ static int aw88261_dev_reg_update(struct aw88261 *aw88261, unsigned char *data, 
 {
 	struct aw_device *aw_dev = aw88261->aw_pa;
 	struct aw_volume_desc *vol_desc = &aw_dev->volume_desc;
-	unsigned int read_val, efcheck_val, read_vol;
+	unsigned int read_val, read_vol;
 	struct device_node *np = aw_dev->dev->of_node;
 
 	int data_len, i, ret;
@@ -283,6 +274,7 @@ static int aw88261_dev_reg_update(struct aw88261 *aw88261, unsigned char *data, 
 		reg_addr = reg_data[i];
 		reg_val = reg_data[i + 1];
 
+		/* Firmware sets also registers that doesn't exist in the device */
 		switch (reg_addr) {
 		case AW88261_ID_REG:
 		case AW88261_SYSST_REG:
@@ -322,45 +314,30 @@ static int aw88261_dev_reg_update(struct aw88261 *aw88261, unsigned char *data, 
 			/* enable uls hmute */
 			reg_val &= AW88261_ULS_HMUTE_MASK;
 			reg_val |= AW88261_ULS_HMUTE_ENABLE_VALUE;
-
-			reg_val = 0b0011001001000000;
-		}
-
-		/* Special handling for I2SCTRL registers for Xiaomi Pad 6 */
-		if (reg_addr == AW88261_I2SCTRL1_REG &&
-			(of_machine_is_compatible("xiaomi,pipa") ||
-			of_machine_is_compatible("qcom,sm8250-mtp"))) {
-			//reg_val &= ~(0x3 << 0); /* Clear I2S format bits */
-			//reg_val |= (0x1 << 0); /* Set TDM format */
-
-			reg_val = 0b000010011101000; // 0b000_01_00_11_10_1000;
-			dev_dbg(aw_dev->dev, "Setting I2S mode ");
 		}
 
 		if (reg_addr == AW88261_I2SCTRL2_REG &&
 			(of_machine_is_compatible("xiaomi,pipa") ||
 			of_machine_is_compatible("qcom,sm8250-mtp"))) {
-			/* Force TDM mode */
-			//reg_val &= ~(0x3 << 0); /* Clear I2S format bits */
-			//reg_val |= (0x1 << 0); /* Set TDM format */
+			
+			/* Set valid TDM slot amount (8) */
+			reg_val &= ~AW88261_SLOT_NUM_MASK;
+			reg_val |= AW88261_SLOT_NUM_TDM8S;
 
 			u32 slot_num = 0;
-
 			of_property_read_u32(np, "rx_slot", &slot_num);
-			// slot_num = 0;
-			reg_val = 0b0101000000000000 | (slot_num << 4) | (slot_num); // 0b0101_0000_0000_0000;
-			dev_info(
-				aw_dev->dev,
-				"Setting TDM mode for Xiaomi Pad 6, channel: %d",
-				slot_num);
+		
+			/* Select valid RX slot */
+			reg_val &= ~(AW88261_I2S_RXL_SLOTVLD_MASK | AW88261_I2S_RXR_SLOTVLD_MASK);
+			reg_val |= (slot_num << 4) | slot_num;
+
+			dev_info(aw_dev->dev, "Setting TDM RX mode for Xiaomi Pad 6, channel: %d", slot_num);
 		}
 
 		/* i2stxen */
 		if (reg_addr == AW88261_I2SCTRL3_REG) {
 			/* close tx */
-			// reg_val &= AW88261_I2STXEN_MASK;
-			// reg_val |= AW88261_I2STXEN_DISABLE_VALUE;
-			reg_val = 0b0000000011110110; // 0b00000000_0_0_0_1_0_0_1_0;
+			reg_val &= ~AW88261_I2XTXEN_BIT;
 		}
 
 		if (reg_addr == AW88261_SYSCTRL2_REG) {
@@ -675,14 +652,8 @@ static int aw88261_hw_params(struct snd_pcm_substream *substream,
 
 static int aw88261_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
-	// aw_snd_soc_codec_t *codec = dai->component;
-
-	// struct aw88261 *aw88261 = snd_soc_component_get_drvdata(codec);
-
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		// handle playback
-	} else {
-		// handle capture
 	}
 
 	return 0;
@@ -702,13 +673,6 @@ static struct snd_soc_dai_driver aw88261_dai[] = {
 		.id = 1,
 		.playback = {
 			.stream_name = "Speaker_Playback",
-			.channels_min = 1,
-			.channels_max = 1,
-			.rates = AW88261_RATES,
-			.formats = AW88261_FORMATS,
-		},
-		.capture = {
-			.stream_name = "Speaker_Capture",
 			.channels_min = 1,
 			.channels_max = 1,
 			.rates = AW88261_RATES,
@@ -1153,15 +1117,6 @@ static int aw88261_codec_probe(struct snd_soc_component *component)
 	if (ret) {
 		dev_err(component->dev, "Failed to add controls: %d\n", ret);
 		return ret;
-	}
-
-	/* Apply Xiaomi Pad 6 specific optimizations */
-	if (of_machine_is_compatible("xiaomi,pipa") ||
-		of_machine_is_compatible("qcom,sm8250-mtp")) {
-		dev_info(
-			component->dev,
-			"Applying Xiaomi Pad 6 specific optimizations for channel %d",
-			aw88261->aw_pa->channel);
 	}
 
 	return ret;
