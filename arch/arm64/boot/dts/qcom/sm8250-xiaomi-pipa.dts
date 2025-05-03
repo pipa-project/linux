@@ -40,13 +40,16 @@
 	qcom,board-id = <0x34 0>;
 
 	aliases {
-		serial0 = &uart6;
+		serial0 = &uart12;
+		serial1 = &uart6;
 	};
 
 	chosen {
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
+
+		stdout-path = "serial0:115200n8";
 
 		framebuffer: framebuffer@9c000000 {
 			compatible = "simple-framebuffer";
@@ -153,6 +156,22 @@
 		enable-active-high;
 
 		gpio = <&tlmm 84 GPIO_ACTIVE_HIGH>;
+
+		vin-supply = <&vreg_bob>;
+	};
+
+	usb_uart: usb-uart-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "usb_uart";
+
+		regulator-min-microvolt = <2800000>;
+		regulator-max-microvolt = <2800000>;
+
+		enable-active-high;
+
+		gpio = <&tlmm 23 GPIO_ACTIVE_HIGH>;
+
+		regulator-always-on;
 
 		vin-supply = <&vreg_bob>;
 	};
@@ -1531,6 +1550,10 @@ bq2597x_master_int_default: bq2597x-master-int-default {
 		vddrfa1p2-supply = <&vreg_pmu_rfa_1p2>;
 		vddrfa1p7-supply = <&vreg_pmu_rfa_1p7>;
 	};
+};
+
+&uart12 {
+	status = "okay";
 };
 
 &usb_1 {
