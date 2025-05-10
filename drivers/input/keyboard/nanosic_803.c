@@ -311,33 +311,31 @@ static void device_connect_handler(struct nanosic_803_priv *nanosic_dev)
 	int ret;
 
 	if (nanosic_dev->is_connected) {
-		if (nanosic_dev->keyboard_input_dev == 0) {
-			keyboard_input_dev = devm_input_allocate_device(nanosic_dev->dev);
-			if (!keyboard_input_dev) {
-				dev_err(nanosic_dev->dev, "could not allocate keyboard input device: %d\n", -ENOMEM);
-				return;
-			}
-			keyboard_input_dev->name = "Nanosic 803 keyboard";
-			keyboard_input_dev->phys = "input/keyboard";
-			keyboard_input_dev->id.bustype = BUS_I2C;
-			keyboard_input_dev->id.vendor = 0x1234;
-			keyboard_input_dev->id.product = 0x5678;
-			keyboard_input_dev->id.version = 0x0100;
-
-			set_bit(EV_KEY, keyboard_input_dev->evbit);
-			set_bit(EV_REP, keyboard_input_dev->evbit);
-
-			keyboard_input_dev->evbit[0] |= BIT_MASK(EV_LED) |  BIT_MASK(EV_KEY) | BIT_MASK(EV_REP);
-			keyboard_input_dev->ledbit[0] = BIT_MASK(LED_CAPSL);
-			keyboard_input_dev->event = nanosic_event;
-
-			input_set_drvdata(keyboard_input_dev, nanosic_dev);
-
-			for (int i = 0; i < KEY_MAX; i++) {
-				set_bit(i, keyboard_input_dev->keybit);
-			}
-			nanosic_dev->keyboard_input_dev = keyboard_input_dev;
+		keyboard_input_dev = devm_input_allocate_device(nanosic_dev->dev);
+		if (!keyboard_input_dev) {
+			dev_err(nanosic_dev->dev, "could not allocate keyboard input device: %d\n", -ENOMEM);
+			return;
 		}
+		keyboard_input_dev->name = "Nanosic 803 keyboard";
+		keyboard_input_dev->phys = "input/keyboard";
+		keyboard_input_dev->id.bustype = BUS_I2C;
+		keyboard_input_dev->id.vendor = 0x1234;
+		keyboard_input_dev->id.product = 0x5678;
+		keyboard_input_dev->id.version = 0x0100;
+
+		set_bit(EV_KEY, keyboard_input_dev->evbit);
+		set_bit(EV_REP, keyboard_input_dev->evbit);
+
+		keyboard_input_dev->evbit[0] |= BIT_MASK(EV_LED) |  BIT_MASK(EV_KEY) | BIT_MASK(EV_REP);
+		keyboard_input_dev->ledbit[0] = BIT_MASK(LED_CAPSL);
+		keyboard_input_dev->event = nanosic_event;
+
+		input_set_drvdata(keyboard_input_dev, nanosic_dev);
+
+		for (int i = 0; i < KEY_MAX; i++) {
+			set_bit(i, keyboard_input_dev->keybit);
+		}
+		nanosic_dev->keyboard_input_dev = keyboard_input_dev;
 
 		ret = input_register_device(nanosic_dev->keyboard_input_dev);
 		if (ret) {
