@@ -279,8 +279,7 @@ static int ps5169_probe(struct i2c_client *client)
 
 	ps5169->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
 	if (IS_ERR(ps5169->reset_gpio))
-		return dev_err_probe(dev, PTR_ERR(ps5169->reset_gpio),
-				     "failed to get reset gpio\n");
+		dev_err(dev, "failed to get reset gpio\n");
 
 	ps5169->typec_switch = typec_switch_get(dev);
 	if (IS_ERR(ps5169->typec_switch))
@@ -300,7 +299,8 @@ static int ps5169_probe(struct i2c_client *client)
 		goto err_mux_put;
 	}
 
-	gpiod_set_value(ps5169->reset_gpio, 0);
+	if (ps5169->reset_gpio)
+		gpiod_set_value(ps5169->reset_gpio, 0);
 
 	ret = ps5169_detect(ps5169);
 	if (ret)
@@ -341,7 +341,8 @@ static int ps5169_probe(struct i2c_client *client)
 err_switch_unregister:
 	typec_switch_unregister(ps5169->sw);
 err_disable_regulator:
-	gpiod_set_value(ps5169->reset_gpio, 1);
+	if (ps5169->reset_gpio)
+		gpiod_set_value(ps5169->reset_gpio, 1);
 	regulator_disable(ps5169->dvdd_supply);
 err_mux_put:
 	typec_mux_put(ps5169->typec_mux);
@@ -358,7 +359,8 @@ static void ps5169_remove(struct i2c_client *client)
 	typec_retimer_unregister(ps5169->retimer);
 	typec_switch_unregister(ps5169->sw);
 
-	gpiod_set_value(ps5169->reset_gpio, 1);
+	if (ps5169->reset_gpio)
+		gpiod_set_value(ps5169->reset_gpio, 1);
 
 	regulator_disable(ps5169->dvdd_supply);
 
