@@ -33,8 +33,10 @@ typec_altmode_set_mux(struct altmode *alt, unsigned long conf, void *data)
 {
 	struct typec_mux_state state;
 
-	if (!alt->mux)
+	if (!alt->mux) {
+		printk("typec_altmode_set_mux: no mux");
 		return 0;
+	}
 
 	state.alt = &alt->adev;
 	state.mode = conf;
@@ -419,9 +421,13 @@ struct typec_altmode *typec_match_altmode(struct typec_altmode **altmodes,
 {
 	int i;
 
+	printk("Matching altmode: SVID: 0x%04x, Mode: 0x%02x\n", svid, mode);
+	dump_stack();
+
 	for (i = 0; i < n; i++) {
 		if (!altmodes[i])
 			break;
+		printk("i=%d: 0x%04x, Mode: 0x%02x\n", i, altmodes[i]->svid, altmodes[i]->mode);
 		if (altmodes[i]->svid == svid && altmodes[i]->mode == mode)
 			return altmodes[i];
 	}

@@ -85,6 +85,9 @@ static int fsa4480_set(struct fsa4480 *fsa)
 		reverse = !reverse;
 
 	/* USB Mode */
+	// fsa->mode = TYPEC_DP_STATE_E;
+	// fsa->svid = 0xff01;
+	// dev_err(&fsa->client->dev, "Mode: %lu\n", fsa->mode);
 	if (fsa->mode < TYPEC_STATE_MODAL ||
 	    (!fsa->svid && (fsa->mode == TYPEC_MODE_USB2 ||
 			    fsa->mode == TYPEC_MODE_USB3))) {
@@ -95,6 +98,7 @@ static int fsa4480_set(struct fsa4480 *fsa)
 		/* DP Only */
 		case TYPEC_DP_STATE_C:
 		case TYPEC_DP_STATE_E:
+			dev_err(&fsa->client->dev, "Enabing DP Only");
 			enable |= FSA4480_ENABLE_SBU;
 			if (reverse)
 				sel = FSA4480_SEL_SBU_REVERSE;
@@ -103,6 +107,7 @@ static int fsa4480_set(struct fsa4480 *fsa)
 		/* DP + USB */
 		case TYPEC_DP_STATE_D:
 		case TYPEC_DP_STATE_F:
+			dev_err(&fsa->client->dev, "Enabing DP + USB");
 			enable |= FSA4480_ENABLE_USB | FSA4480_ENABLE_SBU;
 			sel = FSA4480_SEL_USB;
 			if (reverse)
@@ -142,6 +147,8 @@ static int fsa4480_set(struct fsa4480 *fsa)
 
 	fsa->cur_enable = enable;
 
+	dev_err(&fsa->client->dev, "Mode %lu is set", fsa->mode);
+
 	return 0;
 }
 
@@ -169,15 +176,21 @@ static int fsa4480_mux_set(struct typec_mux_dev *mux, struct typec_mux_state *st
 	struct fsa4480 *fsa = typec_mux_get_drvdata(mux);
 	int ret = 0;
 
+	dump_stack();
+
 	mutex_lock(&fsa->lock);
 
 	if (fsa->mode != state->mode) {
 		fsa->mode = state->mode;
 
-		if (state->alt)
+		dev_err(&fsa->client->dev, "Mode: %lu\n", fsa->mode);
+		if (state->alt) {
 			fsa->svid = state->alt->svid;
-		else
+			dev_err(&fsa->client->dev, "Alt mode, svid=%d\n", fsa->svid);
+		} else {
+			dev_err(&fsa->client->dev, "No alt mode");
 			fsa->svid = 0; // No SVID
+		}
 
 		ret = fsa4480_set(fsa);
 	}

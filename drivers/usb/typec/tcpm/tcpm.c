@@ -2160,6 +2160,7 @@ static int tcpm_pd_svdm(struct tcpm_port *port, struct typec_altmode *adev,
 			}
 			break;
 		case CMD_DISCOVER_SVID:
+			dev_err(port->dev, "CMD_DISCOVER_SVID");
 			*response_tx_sop_type = rx_sop_type;
 			/* 6.4.4.3.2 */
 			if (svdm_consume_svids(port, p, cnt, rx_sop_type)) {
@@ -2182,6 +2183,7 @@ static int tcpm_pd_svdm(struct tcpm_port *port, struct typec_altmode *adev,
 			}
 			break;
 		case CMD_DISCOVER_MODES:
+			dev_err(port->dev, "CMD_DISCOVER_MODES");
 			if (rx_sop_type == TCPC_TX_SOP) {
 				/* 6.4.4.3.3 */
 				svdm_consume_modes(port, p, cnt, rx_sop_type);

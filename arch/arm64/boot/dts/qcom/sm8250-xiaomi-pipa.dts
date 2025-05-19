@@ -466,6 +466,7 @@
 			regulator-min-microvolt = <800000>;
 			regulator-max-microvolt = <920000>;
 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+			regulator-always-on;
 		};
 	};
 
@@ -537,6 +538,7 @@
 			regulator-min-microvolt = <1200000>; // 800000
 			regulator-max-microvolt = <1200000>;
 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+			regulator-always-on;
 		};
 
 		vreg_l4c_1p8: ldo4 {
@@ -741,7 +743,7 @@
 };
 
 &mdss_dp_out {
-	data-lanes = <0 1 2 3>;
+	data-lanes = <0 1>;
 	remote-endpoint = <&usb_1_qmpphy_dp_in>;
 };
 
@@ -1181,7 +1183,6 @@
 
 		power-role = "dual";
 		data-role = "dual";
-		try-power-role = "sink";
 		self-powered;
 
 		op-sink-microwatt = <60000000>;
@@ -1196,10 +1197,10 @@
 				       PDO_FIXED_USB_COMM |
 				       PDO_FIXED_DATA_SWAP)
 				       PDO_VAR(5000, 9000, 5000)>;
-        
-        altmodes {
+
+		altmodes {
 			displayport {
-				svid = <0xff01>;
+				svid = /bits/ 16 <0xff01>;
 				vdo = <0x00001c46>;
 			};
 		};

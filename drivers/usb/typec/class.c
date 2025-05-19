@@ -2304,6 +2304,8 @@ EXPORT_SYMBOL_GPL(typec_get_orientation);
  */
 int typec_set_mode(struct typec_port *port, int mode)
 {
+	dev_err(&port->dev, "Mode: %d\n", mode);
+	dump_stack();
 	struct typec_mux_state state = { };
 
 	state.mode = mode;
