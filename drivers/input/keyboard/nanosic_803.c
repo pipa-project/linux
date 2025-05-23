@@ -399,9 +399,9 @@ static void nanosic_handle_keyboard(struct nanosic_803_priv *nanosic_dev, char *
 			}
 		}
 		if (!found) {
+			dev_dbg(nanosic_dev->dev, "Key pressed: 0x%02X\n", buf[6+i]);
 			input_report_key(nanosic_dev->keyboard_input_dev, hid_to_linux_keycode[(unsigned char)buf[6+i]], 1);
 			input_sync(nanosic_dev->keyboard_input_dev);
-			dev_dbg(nanosic_dev->dev, "Key pressed: 0x%02X\n", buf[6+i]);
 		}
 	}
 
@@ -530,7 +530,6 @@ static irqreturn_t nanosic_interrupt_thread_fn(int irq, void *dev_id)
 			break;
 		case 0x23:
 			// Handle hall event
-			dev_err(nanosic_dev->dev, buf);
 			nanosic_handle_hall(nanosic_dev, buf);
 			break;
 	}
