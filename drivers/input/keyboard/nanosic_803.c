@@ -227,7 +227,7 @@ static int nanosic_i2c_read(struct nanosic_803_priv *nanosic_dev, void *buf, siz
 
 	ret = i2c_transfer(adap, msg, 2);
 	if (ret < 0) {
-		printk("i2c_transfer read error\n");
+		dev_err(nanosic_dev->dev, "i2c_transfer read error\n");
 		len = -1;
 	}
 
@@ -532,7 +532,7 @@ static irqreturn_t nanosic_interrupt_thread_fn(int irq, void *dev_id)
 	dev_dbg(nanosic_dev->dev, "nanosic message: %s\n", hex_dump);
 
 	if (buf[0] != 0x57 || buf[2] == 0) {
-		dev_err(nanosic_dev->dev, "Malformed message\n");
+		dev_dbg(nanosic_dev->dev, "Malformed message\n");
 		/*
 		 * Our hardware might randomly return no message/random data,
 		 * so assume we handled IRQ correctly
