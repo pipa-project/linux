@@ -426,18 +426,19 @@ static void nanosic_handle_keyboard(struct nanosic_803_priv *nanosic_dev, char *
 
 static void nanosic_handle_fn_key(struct nanosic_803_priv *nanosic_dev, char *buf)
 {
-	if (buf[4] != 0x00) {
-		dev_dbg(nanosic_dev->dev, "Key pressed: 0x%02X\n", buf[4]);
-		input_report_key(nanosic_dev->keyboard_input_dev, hid_to_linux_keycode[(unsigned char)buf[4]], 1);
-		input_sync(nanosic_dev->keyboard_input_dev);
-	} else {
+	if (buf[4] != nanosic_dev->last_fn_key) {
 		if (nanosic_dev->last_fn_key != 0x00) {
 			dev_dbg(nanosic_dev->dev, "Key released: 0x%02X\n", nanosic_dev->last_fn_key);
 			input_report_key(nanosic_dev->keyboard_input_dev, hid_to_linux_keycode[(unsigned char)nanosic_dev->last_fn_key], 0);
 			input_sync(nanosic_dev->keyboard_input_dev);
 		}
+		if (buf[4] != 0x00) {
+			dev_dbg(nanosic_dev->dev, "Key pressed: 0x%02X\n", buf[4]);
+			input_report_key(nanosic_dev->keyboard_input_dev, hid_to_linux_keycode[(unsigned char)buf[4]], 1);
+			input_sync(nanosic_dev->keyboard_input_dev);
+		}
+		nanosic_dev->last_fn_key = buf[4];
 	}
-	nanosic_dev->last_fn_key = buf[4];
 }
 
 static void nanosic_touch_timer_callback(struct timer_list *t)
