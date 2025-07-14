@@ -1571,9 +1571,18 @@ static int va_macro_probe(struct platform_device *pdev)
 		clk_set_rate(va->npl, 2 * VA_MACRO_MCLK_FREQ);
 	}
 
-	ret = clk_prepare_enable(va->macro);
-	if (ret)
+	int retries = 20;
+	while (retries--) {
+		ret = clk_prepare_enable(va->macro);
+		if (!ret)
+			break;
+		msleep(100);
+	}
+	if (ret) {
+		dev_err(dev, "Failed to enable va macro clock after 20 retries\n");
 		goto err;
+	}
+	dev_info(dev, "Enabled va macro clock after %d retries, each after 100ms\n", 20 - retries);
 
 	ret = clk_prepare_enable(va->dcodec);
 	if (ret)
