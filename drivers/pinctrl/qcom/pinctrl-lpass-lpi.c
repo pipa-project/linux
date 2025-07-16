@@ -11,6 +11,7 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/seq_file.h>
+#include <linux/delay.h>
 
 #include <linux/pinctrl/pinconf-generic.h>
 #include <linux/pinctrl/pinconf.h>
@@ -468,9 +469,18 @@ int lpi_pinctrl_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret = clk_bulk_prepare_enable(MAX_LPI_NUM_CLKS, pctrl->clks);
+	int retries = 0;
+	while (retries < 10) {
+		ret = clk_bulk_prepare_enable(MAX_LPI_NUM_CLKS, pctrl->clks);
+		if (ret == 0)
+			break;
+		retries++;
+		msleep(100);
+	}
 	if (ret)
 		return dev_err_probe(dev, ret, "Can't enable clocks\n");
+	else if (retries > 1) // usually takes one retry
+		dev_info(dev, "Clocks took %d retries to enable\n", retries);
 
 	pctrl->desc.pctlops = &lpi_gpio_pinctrl_ops;
 	pctrl->desc.pmxops = &lpi_gpio_pinmux_ops;
